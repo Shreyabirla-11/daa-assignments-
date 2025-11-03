@@ -1,0 +1,206 @@
+#include <iostream>
+#include <vector>
+#include <climits>
+#include <algorithm>
+
+using namespace std;
+
+class MultistageGraph {
+private:
+    int numStages;
+    int numVertices;
+    vector<vector<pair<int, int>>> graph;
+    vector<int> stageMapping;
+    vector<vector<int>> stages;
+
+public:
+    MultistageGraph(int stages, int vertices) {
+        numStages = stages;
+        numVertices = vertices;
+        graph.resize(vertices + 1);
+        stageMapping.resize(vertices + 1, 0);
+        this->stages.resize(stages + 1);
+    }
+
+    void addVertexToStage(int vertex, int stage) {
+        if (stage >= 1 && stage <= numStages) {
+            stageMapping[vertex] = stage;
+            stages[stage].push_back(vertex);
+        }
+    }
+
+    void addEdge(int u, int v, int w) {
+        if (stageMapping[v] == stageMapping[u] + 1) {
+            graph[u].push_back({v, w});
+        } else {
+            cout << "Warning: Edge (" << u << "," << v << ") violates stage ordering!" << endl;
+        }
+    }
+
+    pair<int, vector<int>> findShortestPath(int source, int destination) {
+        if (stageMapping[source] != 1) {
+            cout << "Error: Source must be in stage 1!" << endl;
+            return {INT_MAX, {}};
+        }
+        if (stageMapping[destination] != numStages) {
+            cout << "Error: Destination must be in final stage!" << endl;
+            return {INT_MAX, {}};
+        }
+
+        vector<int> cost(numVertices + 1, INT_MAX);
+        vector<int> nextNode(numVertices + 1, -1);
+
+        cost[destination] = 0;
+        nextNode[destination] = destination;
+
+        for (int stage = numStages - 1; stage >= 1; stage--) {
+            cout << "\n=== Processing Stage " << stage << " ===" << endl;
+
+            for (int u : stages[stage]) {
+                cout << "  Vertex " << u << ": ";
+                int minCost = INT_MAX;
+                int bestNext = -1;
+
+                for (auto &edge : graph[u]) {
+                    int v = edge.first;
+                    int weight = edge.second;
+
+                    if (cost[v] != INT_MAX) {
+                        int totalCost = weight + cost[v];
+                        cout << "(" << u << "->" << v << ": " << weight << "+" << cost[v] << "=" << totalCost << ") ";
+
+                        if (totalCost < minCost) {
+                            minCost = totalCost;
+                            bestNext = v;
+                        }
+                    }
+                }
+
+                if (minCost != INT_MAX) {
+                    cost[u] = minCost;
+                    nextNode[u] = bestNext;
+                    cout << "\n  Selected: cost[" << u << "] = " << minCost << ", next[" << u << "] = " << bestNext;
+                } else {
+                    cout << "\n  No valid path from vertex " << u;
+                }
+                cout << endl;
+            }
+        }
+
+        vector<int> path;
+        if (cost[source] != INT_MAX) {
+            int current = source;
+            while (current != destination) {
+                path.push_back(current);
+                current = nextNode[current];
+            }
+            path.push_back(destination);
+        }
+
+        return {cost[source], path};
+    }
+
+    void displayGraph() {
+        cout << "\n=== MULTISTAGE GRAPH STRUCTURE ===" << endl;
+        for (int stage = 1; stage <= numStages; stage++) {
+            cout << "Stage " << stage << ": ";
+            for (int vertex : stages[stage]) {
+                cout << vertex << " ";
+            }
+            cout << endl;
+        }
+
+        cout << "\n=== EDGES ===" << endl;
+        for (int u = 1; u <= numVertices; u++) {
+            if (!graph[u].empty()) {
+                cout << "Vertex " << u << " (Stage " << stageMapping[u] << ") -> ";
+                for (auto &edge : graph[u]) {
+                    cout << "(" << edge.first << ", cost:" << edge.second << ") ";
+                }
+                cout << endl;
+            }
+        }
+    }
+};
+
+void runExample1() {
+    cout << "==========================================" << endl;
+    cout << "      EXAMPLE 1: ASSIGNMENT GRAPH" << endl;
+    cout << "==========================================" << endl;
+
+    MultistageGraph graph(5, 12);
+    graph.addVertexToStage(1, 1);
+    graph.addVertexToStage(2, 2);
+    graph.addVertexToStage(3, 2);
+    graph.addVertexToStage(4, 2);
+    graph.addVertexToStage(5, 2);
+    graph.addVertexToStage(6, 3);
+    graph.addVertexToStage(7, 3);
+    graph.addVertexToStage(8, 3);
+    graph.addVertexToStage(9, 4);
+    graph.addVertexToStage(10, 4);
+    graph.addVertexToStage(11, 4);
+    graph.addVertexToStage(12, 5);
+
+    graph.addEdge(1, 2, 4);
+    graph.addEdge(1, 3, 1);
+    graph.addEdge(1, 4, 3);
+    graph.addEdge(1, 5, 2);
+    graph.addEdge(2, 6, 9);
+    graph.addEdge(2, 7, 8);
+    graph.addEdge(2, 8, 10);
+    graph.addEdge(3, 6, 6);
+    graph.addEdge(3, 7, 7);
+    graph.addEdge(3, 8, 8);
+    graph.addEdge(4, 6, 3);
+    graph.addEdge(4, 7, 5);
+    graph.addEdge(4, 8, 4);
+    graph.addEdge(5, 6, 2);
+    graph.addEdge(5, 7, 6);
+    graph.addEdge(5, 8, 7);
+    graph.addEdge(6, 9, 5);
+    graph.addEdge(6, 10, 6);
+    graph.addEdge(6, 11, 7);
+    graph.addEdge(7, 9, 4);
+    graph.addEdge(7, 10, 3);
+    graph.addEdge(7, 11, 5);
+    graph.addEdge(8, 9, 2);
+    graph.addEdge(8, 10, 4);
+    graph.addEdge(8, 11, 3);
+    graph.addEdge(9, 12, 8);
+    graph.addEdge(10, 12, 7);
+    graph.addEdge(11, 12, 6);
+
+    graph.displayGraph();
+    auto result = graph.findShortestPath(1, 12);
+
+    cout << "\n==========================================" << endl;
+    cout << "              FINAL RESULT" << endl;
+    cout << "==========================================" << endl;
+
+    if (result.first != INT_MAX) {
+        cout << "Minimum Cost: " << result.first << endl;
+        cout << "Shortest Path: ";
+        for (int i = 0; i < result.second.size(); i++) {
+            cout << result.second[i];
+            if (i < result.second.size() - 1) {
+                cout << " → ";
+            }
+        }
+        cout << endl;
+    } else {
+        cout << "No path exists from source to destination!" << endl;
+    }
+    cout << "==========================================" << endl;
+}
+
+int main() {
+    cout << "MULTISTAGE GRAPH SHORTEST PATH USING DYNAMIC PROGRAMMING" << endl;
+    cout << "========================================================" << endl;
+    runExample1();
+    cout << "\n\nCOMPLEXITY ANALYSIS:" << endl;
+    cout << "====================" << endl;
+    cout << "Time Complexity: O(V + E)" << endl;
+    cout << "Space Complexity: O(V)" << endl;
+    return 0;
+}
